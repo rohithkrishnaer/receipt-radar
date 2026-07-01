@@ -1,12 +1,30 @@
-expenses = [
-    {"date": "2026-06-01", "category": "food", "amount":12.50},
-    {"date": "2026-06-02", "category": "software", "amount":30.20},
-    {"date": "2026-06-01", "category": "food", "amount":12.50},
-    {"date": "2026-06-04", "category": "travel", "amount":400.50},
-    {"date": "2026-06-05", "category": "software", "amount":20.10},
-    {"date": "2026-06-06", "category": "food", "amount":55.55}
-]
+import csv
+import json
 
+class InvalidExpenseError(Exception):
+    pass
+
+def load_expense(path):
+    expenses = []
+
+    try:
+        with open (path) as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                try:
+                    row["amount"] = float(row["amount"])
+                    if row["amount"] <= 0:
+                        raise InvalidExpenseError(f"Non-positive amount: {row}")
+                    expenses.append({"date" : row["date"], "category" : row["category"], "amount" : row["amount"]})
+                except (ValueError, InvalidExpenseError):
+                    print(f"⚠ Skipping malformed row: {row}")
+                    continue
+    except FileNotFoundError:
+        expenses = []
+
+    return expenses
+
+expenses = load_expense("expenses.csv")
 
 
 def total_spend(expenses):
@@ -68,4 +86,14 @@ def report():
     print()
 
 
+def save_summary(expenses, path):
+    summary = {
+        "total" : total_spend(expenses),
+        "by_category" : spend_by_category(expenses)
+    }
+    with open(path, "w") as f:
+        json.dump(summary, f, indent=2)
+
+
 report()
+save_summary(expenses, "summary.json")
